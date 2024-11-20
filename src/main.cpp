@@ -1,3 +1,5 @@
+#include "credentials.h"
+
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
@@ -6,18 +8,6 @@
 #include <ESP8266WiFi.h>
 #include <queue>
 
-// Set up your Wi-Fi credentials
-constexpr auto ssid = "DIGIFIBRA-FuKP";
-const char *password = "atic_2_b";
-
-// Set up your MQTT information
-const char *mqtt_server = "192.168.1.167"; // set the IP address of the Raspberry
-constexpr auto mqtt_port = 1883;
-const char *mqtt_user = "ssg";                   // set the user of the mqtt server
-const char *mqtt_password = "pestevino1";        // set the password of the mqtt server
-const char *mqtt_topic = "temp_hum_sensor_room"; // set the topic
-// const char* mqtt_topic = "temp_hum_sensor_living";     // set the topic
-// const char* mqtt_topic = "temp_hum_sensor_terrace";     // set the topic
 constexpr auto DHT22_PIN{14};
 constexpr auto SEPARATOR{","};
 using reading = std::tuple<time_t, float, float>;
@@ -98,17 +88,6 @@ void reconnect()
             retries++;
         }
     }
-    // while (!mqttClient.connected()) {
-    //     Serial.print("Connecting to MQTT...");
-    //     if (mqttClient.connect("ESP8266Client_1", mqtt_user, mqtt_password)) {
-    //     Serial.println("connected");
-    //     } else {
-    //     Serial.print("error, rc=");
-    //     Serial.print(mqttClient.state());
-    //     Serial.println(" try again in 5 seconds");
-    //     delay(5000);
-    //     }
-    // }
 }
 
 void loop()
