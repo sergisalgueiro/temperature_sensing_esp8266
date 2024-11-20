@@ -12,6 +12,8 @@
 
 constexpr auto DHT22_PIN{14};
 constexpr auto SEPARATOR{","};
+constexpr auto LOOP_TIME_MS{2 * 60 * 1000};
+
 using reading = std::tuple<time_t, float, float>;
 std::queue<reading> readings;
 
@@ -72,7 +74,7 @@ String removeLastCharacter(String input)
 
 void end_loop()
 {
-    delay(1000);
+    delay(LOOP_TIME_MS);
 }
 
 void setup()
