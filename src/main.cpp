@@ -55,6 +55,8 @@ void setup_wifi()
     }
     println("");
     println("WiFi connected");
+    WiFi.setAutoReconnect(true);
+    WiFi.persistent(true);
 }
 
 String removeLastCharacter(String input)
