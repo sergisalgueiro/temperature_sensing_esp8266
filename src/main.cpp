@@ -8,7 +8,7 @@
 #include <ESP8266WiFi.h>
 #include <queue>
 
-#define debug
+// #define debug
 
 constexpr auto DHT22_PIN{14};
 constexpr auto SEPARATOR{","};
@@ -144,7 +144,6 @@ void loop()
     {
         reconnect();
     }
-    // auto const mqttConnected{mqttClient.loop()};
     mqttClient.loop();
 
     // Prepare payload
