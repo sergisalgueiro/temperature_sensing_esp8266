@@ -72,18 +72,20 @@ String removeLastCharacter(String input)
 
 void end_loop()
 {
-    delay(10000);
+    delay(1000);
 }
 
 void setup()
 {
+    pinMode(D0, WAKEUP_PULLUP);
 #ifdef debug
     Serial.begin(115200);
+    // Serial.begin(74880);
 #endif // debug
     delay(2000);
     setup_wifi();
     mqttClient.setServer(mqtt_server, mqtt_port);
-    dht.setup(12, DHTesp::AM2302); // Connect DHT sensor to GPIO 12
+    dht.setup(D6, DHTesp::AM2302); // Connect DHT sensor to GPIO 12
     timeClient.begin();
 }
 
