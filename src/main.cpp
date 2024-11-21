@@ -126,6 +126,12 @@ void loop()
         println("Time updated: " + String(asctime(gmtime(&epoch))));
     }
 
+    if (!timeClient.isTimeSet())
+    {
+        println("Time not set yet");
+        end_loop();
+    }
+
     // Read data from DHT22
     float temperature = dht.getTemperature();
     println("Temperature: " + String(temperature) + "°C");
