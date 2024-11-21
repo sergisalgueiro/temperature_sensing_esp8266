@@ -23,7 +23,7 @@ DHTesp dht;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 360000);
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 0, 360000);
 
 template <typename T>
 void println(T line)
