@@ -1,25 +1,22 @@
 #include "credentials.h"
+#include "DHTReader.h"
 
 #include <Arduino.h>
 #include <PubSubClient.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include <DHTesp.h>
 #include <ESP8266WiFi.h>
 #include <queue>
 
 // #define debug
 
-constexpr auto DHT22_PIN{14};
 constexpr auto SEPARATOR{","};
-constexpr auto LOOP_TIME_MS{2 * 60 * 1000};
+constexpr auto READ_DHT22_INTERVAL_MS{2 * 60 * 1000};
 
 using reading = std::tuple<time_t, float, float>;
 std::queue<reading> readings;
 
-// Set the DHT22 sensor pin
-DHTesp dht;
-
+DHTReader dht;
 WiFiClient espClient;
 PubSubClient mqttClient(espClient);
 WiFiUDP ntpUDP;
@@ -59,24 +56,15 @@ void setup_wifi()
     WiFi.persistent(true);
 }
 
-String removeLastCharacter(String input)
+void mqtt_callback(char *topic, byte *payload, unsigned int length)
 {
-    // Checks whether the string has at least one character
-    if (input.length() > 0)
+    // Convert the message payload from bytes to a string
+    String message;
+    for (unsigned int i = 0; i < length; i++)
     {
-        // Use substring() to get a substring excluding the last character
-        return input.substring(0, input.length() - 1);
+        message += (char)payload[i];
     }
-    else
-    {
-        // The string is empty, return an empty string
-        return "";
-    }
-}
-
-void end_loop()
-{
-    delay(LOOP_TIME_MS);
+    println("Message arrived [" + String(topic) + "] " + message);
 }
 
 void setup()
@@ -89,8 +77,10 @@ void setup()
     delay(2000);
     setup_wifi();
     mqttClient.setServer(mqtt_server, mqtt_port);
-    dht.setup(D6, DHTesp::AM2302); // Connect DHT sensor to GPIO 12
+    mqttClient.setCallback(mqtt_callback);
     timeClient.begin();
+    dht.setup(D6, DHTesp::DHT22); // Connect DHT sensor to GPIO 12
+    dht.set_read_interval(READ_DHT22_INTERVAL_MS);
 }
 
 void reconnect()
@@ -103,6 +93,7 @@ void reconnect()
         if (mqttClient.connect("ESP8266Client_1", mqtt_user, mqtt_password))
         {
             println("connected");
+            mqttClient.subscribe(mqtt_sub_topic);
         }
         else
         {
@@ -129,25 +120,8 @@ void loop()
     if (!timeClient.isTimeSet())
     {
         println("Time not set yet");
-        end_loop();
+        return;
     }
-
-    // Read data from DHT22
-    float temperature = dht.getTemperature();
-    println("Temperature: " + String(temperature) + "°C");
-    float humidity = dht.getHumidity();
-    println("Humidity: " + String(humidity) + "%");
-
-    // Check if the reading is valid
-    if (isnan(temperature) || isnan(humidity))
-    {
-        println("Error reading the DHT22_1 sensor!");
-        end_loop();
-    }
-
-    // Get reading timestamp
-    auto const timeNowUTC{time(nullptr)};
-    readings.push({timeNowUTC, temperature, humidity});
 
     // Reconnect to MQTT broker if necessary
     if (!mqttClient.connected())
@@ -156,13 +130,34 @@ void loop()
     }
     mqttClient.loop();
 
-    // Prepare payload
+    // Read data from DHT22
+    TempAndHumidity data;
+    auto result{dht.read_data(data)};
+
+    if (isnan(data.temperature) || isnan(data.humidity))
+    {
+        println("Failed to read from DHT sensor!");
+    }
+    else
+    {
+        println("Temperature: " + String(data.temperature) + "°C");
+        println("Humidity: " + String(data.humidity) + "%");
+    }
+
+    // Store if reading is valid
+    if (result && !isnan(data.temperature) && !isnan(data.humidity))
+    {
+        auto const timeNowUTC{time(nullptr)};
+        readings.push({timeNowUTC, data.temperature, data.humidity});
+    }
+
+    // Publish readings to MQTT broker
     while (!readings.empty())
     {
         auto const &[time, temperature, humidity]{readings.front()};
         String payload = String(time) + SEPARATOR + String(temperature) + SEPARATOR + String(humidity);
         println(payload);
-        auto const result{mqttClient.publish(mqtt_topic, payload.c_str())};
+        auto const result{mqttClient.publish(mqtt_pub_topic, payload.c_str())};
         println("Publishing result: " + String(result));
         if (!result)
         {
@@ -170,7 +165,4 @@ void loop()
         }
         readings.pop();
     }
-
-    // Please wait before reading again
-    end_loop();
 }
