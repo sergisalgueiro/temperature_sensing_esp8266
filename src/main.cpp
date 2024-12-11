@@ -137,6 +137,7 @@ void loop()
     if (isnan(data.temperature) || isnan(data.humidity))
     {
         println("Failed to read from DHT sensor!");
+        ESP.restart();
     }
     else
     {
