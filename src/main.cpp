@@ -139,17 +139,16 @@ void loop()
         println("Failed to read from DHT sensor!");
         ESP.restart();
     }
-    else
-    {
-        println("Temperature: " + String(data.temperature) + "°C");
-        println("Humidity: " + String(data.humidity) + "%");
-    }
 
     // Store if reading is valid
     if (result && !isnan(data.temperature) && !isnan(data.humidity))
     {
         auto const timeNowUTC{time(nullptr)};
         readings.push({timeNowUTC, data.temperature, data.humidity});
+
+        println("Temperature: " + String(data.temperature) + "°C");
+        println("Humidity: " + String(data.humidity) + "%");
+        println("Time: " + String(asctime(gmtime(&timeNowUTC))));
     }
 
     // Publish readings to MQTT broker
