@@ -12,6 +12,9 @@
 
 constexpr auto SEPARATOR{","};
 constexpr auto READ_DHT22_INTERVAL_MS{2 * 60 * 1000};
+constexpr auto NTP_INTERVAL_MS{10 * 60 * 1000};
+constexpr auto MAX_READ_RETRIES{5u};
+auto read_retry{0u};
 
 using reading = std::tuple<time_t, float, float>;
 std::queue<reading> readings;
@@ -79,6 +82,7 @@ void setup()
     mqttClient.setServer(mqtt_server, mqtt_port);
     mqttClient.setCallback(mqtt_callback);
     timeClient.begin();
+    timeClient.setUpdateInterval(NTP_INTERVAL_MS);
     dht.setup(D6, DHTesp::DHT22); // Connect DHT sensor to GPIO 12
     dht.set_read_interval(READ_DHT22_INTERVAL_MS);
 }
@@ -134,14 +138,8 @@ void loop()
     TempAndHumidity data;
     auto result{dht.read_data(data)};
 
-    if (isnan(data.temperature) || isnan(data.humidity))
-    {
-        println("Failed to read from DHT sensor!");
-        ESP.restart();
-    }
-
-    // Store if reading is valid
-    if (result && !isnan(data.temperature) && !isnan(data.humidity))
+    // Store reading
+    if (result)
     {
         auto const timeNowUTC{time(nullptr)};
         readings.push({timeNowUTC, data.temperature, data.humidity});
@@ -149,6 +147,16 @@ void loop()
         println("Temperature: " + String(data.temperature) + "°C");
         println("Humidity: " + String(data.humidity) + "%");
         println("Time: " + String(asctime(gmtime(&timeNowUTC))));
+
+        if (isnan(data.temperature) || isnan(data.humidity))
+        {
+            println("Failed to read from DHT sensor! Attempt: " + String(read_retry));
+            read_retry++;
+        }
+        else
+        {
+            read_retry = 0;
+        }
     }
 
     // Publish readings to MQTT broker
@@ -164,5 +172,11 @@ void loop()
             break;
         }
         readings.pop();
+    }
+
+    // Reset ESP if reading fails continuously
+    if (read_retry >= MAX_READ_RETRIES)
+    {
+        ESP.restart();
     }
 }
