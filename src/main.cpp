@@ -94,7 +94,7 @@ void reconnect()
     while (!mqttClient.connected() && retries < MAX_RETRIES)
     {
         print("Attempting MQTT connection " + String(retries) + " ...");
-        if (mqttClient.connect("ESP8266Client_1", mqtt_user, mqtt_password))
+        if (mqttClient.connect(mqtt_id, mqtt_user, mqtt_password))
         {
             println("connected");
             mqttClient.subscribe(mqtt_sub_topic);
